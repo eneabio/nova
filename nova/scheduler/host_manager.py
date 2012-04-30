@@ -317,6 +317,9 @@ class HostManager(object):
 
         # Make a compute node dict with the bare essential metrics.
         compute_nodes = db.compute_node_get_all(context)
+        #Enea: compute_nodes is a dict of compute_nodes (from "compute_nodes" table
+        #and is joined with "services" table) 
+        
         for compute in compute_nodes:
             service = compute['service']
             if not service:

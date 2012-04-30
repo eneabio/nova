@@ -206,15 +206,22 @@ class FilterScheduler(driver.Scheduler):
             # variable at that time.
             weighted_host = least_cost.weighted_sum(cost_functions,
                     hosts, filter_properties)
-            LOG.debug(_("Weighted %(weighted_host)s") % locals())
+            LOG.debug(_("Weighted %(weighted_host)s") % locals()) 
             selected_hosts.append(weighted_host)
 
             # Now consume the resources so the filter/weights
             # will change for the next instance.
             weighted_host.host_state.consume_from_instance(
                     instance_properties)
-
+        
         selected_hosts.sort(key=operator.attrgetter('weight'))
+        #Enea_begin
+        if len(selected_hosts)>0:
+                LOG.debug(_('Enea: First weight host: %(weight)s and selected hosts: %(selected_hosts)s and host_state[0]: %(host_state)s'),
+                                {'selected_hosts': selected_hosts,
+                                'host_state': selected_hosts[0].host_state,
+                                'weight': selected_hosts[0].weight})
+        #Enea_end
         return selected_hosts[:num_instances]
 
     def get_cost_functions(self, topic=None):
