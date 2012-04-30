@@ -105,6 +105,9 @@ libvirt_opts = [
                 default=False,
                 help='Inject the admin password at boot time, '
                      'without an agent.'),
+    cfg.BoolOpt('libvirt_inject_key',
+                default=True,
+                help='Inject the ssh public key at boot time'),
     cfg.BoolOpt('use_usb_tablet',
                 default=True,
                 help='Sync virtual and real mouse cursors in Windows VMs'),
@@ -1006,6 +1009,7 @@ class LibvirtConnection(driver.ComputeDriver):
 
         self._chown_console_log_for_instance(instance['name'])
         data = self._flush_libvirt_console(pty)
+        console_log = self._get_console_log_path(instance_name)
         fpath = self._append_to_file(data, console_log)
 
         return libvirt_utils.load_file(fpath)
@@ -1147,9 +1151,12 @@ class LibvirtConnection(driver.ComputeDriver):
         libvirt_utils.mkfs('swap', target)
 
     @staticmethod
-    def _chown_console_log_for_instance(instance_name):
-        console_log = os.path.join(FLAGS.instances_path, instance_name,
-                                   'console.log')
+    def _get_console_log_path(instance_name):
+        return os.path.join(FLAGS.instances_path, instance_name,
+                'console.log')
+
+    def _chown_console_log_for_instance(self, instance_name):
+        console_log = self._get_console_log_path(instance_name)
         if os.path.exists(console_log):
             libvirt_utils.chown(console_log, os.getuid())
 
@@ -1294,7 +1301,7 @@ class LibvirtConnection(driver.ComputeDriver):
             self._create_local(basepath('disk.config'), 64, unit='M',
                                fs_format='msdos', label=label)  # 64MB
 
-        if instance['key_data']:
+        if FLAGS.libvirt_inject_key and instance['key_data']:
             key = str(instance['key_data'])
         else:
             key = None
