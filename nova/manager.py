@@ -194,12 +194,21 @@ class SchedulerDependentManager(Manager):
 
     def update_service_capabilities(self, capabilities):
         """Remember these capabilities to send on next periodic update."""
+        #Eneabegin
+        LOG.debug(_("Enea: in nova.manager capabilities %(capabilities)s") % locals())
+        #Eneaend
         self.last_capabilities = capabilities
 
     @periodic_task
     def _publish_service_capabilities(self, context):
         """Pass data back to the scheduler at a periodic interval."""
+        #Eneabegin
+        capabilities= self.last_capabilities
+        #Eneaend
         if self.last_capabilities:
+            #Eneabegin
+            LOG.debug(_("Enea: in nova.manager capabilities %(capabilities)s") % locals())
+            #Eneaend
             LOG.debug(_('Notifying Schedulers of capabilities ...'))
             api.update_service_capabilities(context, self.service_name,
                                 self.host, self.last_capabilities)

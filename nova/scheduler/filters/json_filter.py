@@ -16,9 +16,13 @@
 
 import json
 import operator
+from nova import utils
+
+from nova import log as logging
 
 from nova.scheduler import filters
 
+LOG = logging.getLogger(__name__)
 
 class JsonFilter(filters.BaseHostFilter):
     """Host Filter to allow simple JSON-based grammar for
@@ -92,6 +96,9 @@ class JsonFilter(filters.BaseHostFilter):
         HostState class.  If $variable is a dictionary, you may
         use: $variable.dictkey
         """
+        #Eneabegin
+        LOG.debug(_("Enea: in JsonFilter _parse_string") % locals())
+        #Eneaend
         if not string:
             return None
         if not string.startswith("$"):
@@ -109,15 +116,18 @@ class JsonFilter(filters.BaseHostFilter):
 
     def _process_filter(self, query, host_state):
         """Recursively parse the query structure."""
+        #Eneabegin
+        LOG.debug(_("Enea: in JsonFilter _process_filter") % locals())
+        #Eneaend
         if not query:
             return True
         cmd = query[0]
         method = self.commands[cmd]
         cooked_args = []
         for arg in query[1:]:
-            if isinstance(arg, list):
+            if isinstance(arg, list):   #Eneabegin if it is a list
                 arg = self._process_filter(arg, host_state)
-            elif isinstance(arg, basestring):
+            elif isinstance(arg, basestring):    #Eneaend if it is a basestring
                 arg = self._parse_string(arg, host_state)
             if arg is not None:
                 cooked_args.append(arg)
@@ -128,8 +138,18 @@ class JsonFilter(filters.BaseHostFilter):
         """Return a list of hosts that can fulfill the requirements
         specified in the query.
         """
+        #Eneabegin
+        LOG.debug(_("Enea: in JsonFilter _host_passes") % locals())
+        #Verify if the host is up
+        service = host_state.service
+        if not utils.service_is_up(service) or service['disabled']:
+            return False
+        #Eneaend
         query = filter_properties.get('query', None)
         if not query:
+            #Eneabegin
+            LOG.debug(_("Enea: JsonFilter without query...host is passed automatically") % locals())
+            #Eneaend
             return True
 
         # NOTE(comstud): Not checking capabilities or service for
@@ -141,5 +161,8 @@ class JsonFilter(filters.BaseHostFilter):
             result = any(result)
         if result:
             # Filter it out.
+            #Eneabegin
+            LOG.debug(_("Enea: JsonFilter with query: %(query)s ...host is passed because it passes the query") % locals())
+            #Eneaend
             return True
         return False

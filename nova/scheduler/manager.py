@@ -192,7 +192,9 @@ class SchedulerManager(manager.Manager):
         compute_ref = compute_ref[0]
         instance_refs = db.instance_get_all_by_host(context,
                                                     compute_ref['host'])
-
+        #Eneabegin
+        host_ref=db.compute_node_get_by_host(context, host)
+        #eneaend
         # Getting total available/used resource
         compute_ref = compute_ref['compute_node'][0]
         resource = {'vcpus': compute_ref['vcpus'],
@@ -200,7 +202,15 @@ class SchedulerManager(manager.Manager):
                     'local_gb': compute_ref['local_gb'],
                     'vcpus_used': compute_ref['vcpus_used'],
                     'memory_mb_used': compute_ref['memory_mb_used'],
-                    'local_gb_used': compute_ref['local_gb_used']}
+                    'local_gb_used': compute_ref['local_gb_used'],
+                    'running_vms':compute_ref['running_vms'],
+                    'n_cpu_vms': compute_ref['n_cpu_vms'],
+                    'n_io_vms':compute_ref['n_io_vms'],
+                    'n_mem_vms':compute_ref['n_mem_vms'],
+                    'n_und_vms':compute_ref['n_und_vms']}
+        #Eneabegin
+        #Insertet capabilities in resource
+        #Eneaend
         usage = dict()
         if not instance_refs:
             return {'resource': resource, 'usage': usage}
@@ -225,5 +235,8 @@ class SchedulerManager(manager.Manager):
                                  'memory_mb': sum(mem),
                                  'root_gb': sum(root),
                                  'ephemeral_gb': sum(ephemeral)}
+            #Eneabegin
+            #Insert capabilities
+            #Eneaend
 
         return {'resource': resource, 'usage': usage}

@@ -64,18 +64,38 @@ def notify(message):
     free_ram_mb = 0
     free_disk_gb = 0
     vms = 0
+    #Eneabegin
+    n_cpu_vms = 0
+    n_io_vms = 0
+    n_mem_vms = 0
+    n_und_vms = 0
+    #Eneaend
     if ended and event == 'delete':
         vms = -1
+        #Eneabegin
+        n_cpu_vms = -1
+        n_io_vms = -1
+        n_mem_vms = -1
+        n_mem_und = -1
+        #Eneaend
         payload = message.get('payload', {})
         free_ram_mb = payload.get('memory_mb', 0)
         free_disk_gb = payload.get('disk_gb', 0)
-
+        #Eneabegin
+        n_cpu_vms = payload.get('n_cpu_vms', 0)
+        n_io_vms = payload.get('n_io_vms', 0)
+        n_mem_vms = payload.get('n_mem_vms', 0)
+        n_und_vms = payload.get('n_und_vms', 0)
+        #Eneaend
     LOG.debug("EventType=%(event_type)s -> host %(host)s: "
               "ram %(free_ram_mb)d, disk %(free_disk_gb)d, "
-              "work %(work)d, vms%(vms)d" % locals())
-
+              "work %(work)d, vms%(vms)d, n_cpu_vms %(n_cpu_vms)d, " 
+              "n_io_vms %(n_io_vms)d, n_mem_vms %(n_mem_vms)d, " 
+              "n_und_vms %(n_und_vms)d" % locals())
+    #Eneabegin
     db.api.compute_node_utilization_update(context.get_admin_context(), host,
         free_ram_mb_delta=free_ram_mb, free_disk_gb_delta=free_disk_gb,
-        work_delta=work, vm_delta=vms)
-
+        work_delta=work, vm_delta=vms, n_cpu_delta=n_cpu_vms, n_io_delta=n_io_vms,
+        n_mem_delta=n_mem_vms, n_und_delta=n_und_vms )
+        #Eneaend
     return True

@@ -2486,7 +2486,7 @@ class HostState(object):
                                     self.connection.get_memory_mb_used())
         data["hypervisor_type"] = self.connection.get_hypervisor_type()
         data["hypervisor_version"] = self.connection.get_hypervisor_version()
-
+    
         self._stats = data
 
         return data

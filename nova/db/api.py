@@ -190,16 +190,23 @@ def compute_node_get_by_host(context, host):
 
 
 def compute_node_utilization_update(context, host, free_ram_mb_delta=0,
-                          free_disk_gb_delta=0, work_delta=0, vm_delta=0):
+                          free_disk_gb_delta=0, work_delta=0, vm_delta=0,
+                          n_cpu_delta=0, n_io_delta=0, n_mem_delta=0, n_und_delta=0):
+    #Eneabegin
+    #Eneaend
     return IMPL.compute_node_utilization_update(context, host,
                           free_ram_mb_delta, free_disk_gb_delta, work_delta,
-                          vm_delta)
+                          vm_delta, n_cpu_delta, n_io_delta, n_mem_delta, n_und_delta )
 
 
 def compute_node_utilization_set(context, host, free_ram_mb=None,
-                                 free_disk_gb=None, work=None, vms=None):
+                                 free_disk_gb=None, work=None, vms=None,
+                                 n_cpu_vms=None, n_io_vms=None, n_mem_vms=None, n_und_vms=None):
+    #Eneabegin
+    #Eneaend
     return IMPL.compute_node_utilization_set(context, host, free_ram_mb,
-                                             free_disk_gb, work, vms)
+                                             free_disk_gb, work, vms, n_cpu_vms,
+                                             n_io_vms, n_mem_vms, n_und_vms)
 
 ###################
 

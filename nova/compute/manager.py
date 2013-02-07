@@ -128,7 +128,7 @@ compute_opts = [
                       'become more funtional for general grouping in Folsom. (see: '
                       'http://etherpad.openstack.org/FolsomNovaHostAggregates-v2)')
     ]
-    #Eneaend
+    #Eneaend example ['beta_cpu=0.3','beta_io=0.7','beta_mem=0','beta_und=0']
 FLAGS = flags.FLAGS
 FLAGS.register_opts(compute_opts)
 
@@ -191,12 +191,12 @@ def _get_image_meta(context, image_ref):
     image_service, image_id = nova.image.get_image_service(context, image_ref)
     return image_service.show(context, image_id)
 
-#Eneabegin (from 4cde26d5 (Merge "Add a force_config_drive flag")
+#Eneabegin
 def _get_additional_capabilities():
-        """Return additional capabilities to advertise for this compute host
-        Kevin L. Mitchell    The brief description should end with a 'period', and there should be a É    Apr 27
-        This will be replaced once HostAggrgates are able to handle more general
-        host grouping for custom schedulers."""
+# """Return additional capabilities to advertise for this compute host
+# This will be replaced once HostAggrgates are able to handle more general
+# host grouping for custom schedulers."""
+#Eneabegin  dict del tipo ['beta_cpu=0.3','beta_io=0.7','beta_mem=0','beta_und=0'] ???    
         capabilities = {}
         for cap in FLAGS.additional_compute_capabilities:
             if '=' in cap:
@@ -205,6 +205,7 @@ def _get_additional_capabilities():
                 name = cap
                 value = True
             capabilities[name] = value
+        LOG.debug(_("Enea: FLAG addional_compute_capabilities=%(capabilities)s") % locals())
         return capabilities
 #Eneaend
 
@@ -2304,6 +2305,9 @@ class ComputeManager(manager.SchedulerDependentManager):
             #Eneabegin (from 4cde26d5 (Merge "Add a force_config_drive flag")
             capabilities = _get_additional_capabilities()   
             capabilities.update(self.driver.get_host_stats(refresh=True))
+            #Eneabegin
+            LOG.debug(_("Enea: _report_driver_status, capabilities: %(capabilities)s") % locals())
+            #Eneaend
             self.update_service_capabilities(capabilities)
             #Eneaend
     @manager.periodic_task(ticks_between_runs=10)

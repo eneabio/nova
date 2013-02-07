@@ -23,6 +23,7 @@ import datetime
 import functools
 import re
 import warnings
+import base64
 
 from nova import block_device
 from nova import db
@@ -425,6 +426,17 @@ def _get_host_utilization(context, host, ram_mb, disk_gb):
     """Compute the current utilization of a given host."""
     instances = instance_get_all_by_host(context, host)
     vms = len(instances)
+    #Eneabegin da fare il filtro
+    running_cpu_vms = len(instance_get_all_by_filters(context,
+                                                {'user_data':base64.b64encode('cpu'),'deleted':0,'host':host},'host','desc')) #len(instance_get_all_by_filters(context,{'user_data':base64.b64encode('cpu'),'host':host,'deleted':0}))
+    running_io_vms = len(instance_get_all_by_filters(context,
+                                                {'user_data':base64.b64encode('io'),'deleted':0,'host':host},'host','desc')) #len(instance_get_all_by_filters(context,{'user_data':base64.b64encode('io'),'host':host,'deleted':0}))
+    running_mem_vms = len(instance_get_all_by_filters(context,
+                                                {'user_data':base64.b64encode('mem'),'deleted':0,'host':host},'host','desc'))
+    #running_und_vms = len(instance_get_all_by_filters(context,
+    #                                            {'hostname':'und','deleted':0},'host','desc')) #len(instance_get_all_by_filters(context,{'user_data':base64.b64encode('und'),'host':host,'deleted':0}))
+    running_und_vms = vms - running_cpu_vms - running_io_vms - running_mem_vms
+    #Eneaend
     free_ram_mb = ram_mb - FLAGS.reserved_host_memory_mb
     free_disk_gb = disk_gb - (FLAGS.reserved_host_disk_mb * 1024)
 
@@ -433,13 +445,18 @@ def _get_host_utilization(context, host, ram_mb, disk_gb):
         free_ram_mb -= instance.memory_mb
         free_disk_gb -= instance.root_gb
         free_disk_gb -= instance.ephemeral_gb
+    
         if instance.vm_state in [vm_states.BUILDING, vm_states.REBUILDING,
                                  vm_states.MIGRATING, vm_states.RESIZING]:
             work += 1
     return dict(free_ram_mb=free_ram_mb,
                 free_disk_gb=free_disk_gb,
                 current_workload=work,
-                running_vms=vms)
+                running_vms=vms,
+                n_cpu_vms=running_cpu_vms,
+                n_io_vms=running_io_vms,
+                n_mem_vms=running_mem_vms,
+                n_und_vms=running_und_vms) #Eneabegin    #Eneaend
 
 
 def _adjust_compute_node_values_for_utilization(context, values, session):
@@ -447,6 +464,9 @@ def _adjust_compute_node_values_for_utilization(context, values, session):
     host = service_ref['host']
     ram_mb = values['memory_mb']
     disk_gb = values['local_gb']
+    #Eneabegin
+    #Insert capabilities
+    #Eneaend
     values.update(_get_host_utilization(context, host, ram_mb, disk_gb))
 
 
@@ -490,7 +510,10 @@ def compute_node_get_by_host(context, host):
 
 
 def compute_node_utilization_update(context, host, free_ram_mb_delta=0,
-                          free_disk_gb_delta=0, work_delta=0, vm_delta=0):
+                          free_disk_gb_delta=0, work_delta=0, vm_delta=0,
+                          n_cpu_delta=0, n_io_delta=0, n_mem_delta=0, n_und_delta=0):
+    #Eneabegin
+    #Eneaend
     """Update a specific ComputeNode entry by a series of deltas.
     Do this as a single atomic action and lock the row for the
     duration of the operation. Requires that ComputeNode record exist."""
@@ -518,13 +541,21 @@ def compute_node_utilization_update(context, host, free_ram_mb_delta=0,
         if work_delta != 0:
             compute_node.current_workload = (table.c.current_workload +
                                              work_delta)
+        #Eneabegin
         if vm_delta != 0:
             compute_node.running_vms = table.c.running_vms + vm_delta
+            
+            compute_node.n_cpu_vms = table.c.n_cpu_vms + n_cpu_delta
+            compute_node.n_io_vms = table.c.n_io_vms + n_io_delta
+            compute_node.n_mem_vms = table.c.n_mem_vms + n_mem_delta
+            compute_node.n_und_vms = table.c.n_und_vms + n_und_delta
+        #Eneaend
     return compute_node
 
 
 def compute_node_utilization_set(context, host, free_ram_mb=None,
-                                 free_disk_gb=None, work=None, vms=None):
+                                 free_disk_gb=None, work=None, vms=None,
+                                 n_cpu_vms=None, n_io_vms=None, n_mem_vms=None, n_und_vms=None):
     """Like compute_node_utilization_update() modify a specific host
     entry. But this function will set the metrics absolutely
     (vs. a delta update).
@@ -550,7 +581,12 @@ def compute_node_utilization_set(context, host, free_ram_mb=None,
             compute_node.current_workload = work
         if vms != None:
             compute_node.running_vms = vms
-
+            #Eneabegin decidere se mettere un if per ogni classe
+            compute_node.n_cpu_vms = n_cpu_vms
+            compute_node.n_io_vms = n_io_vms
+            compute_node.n_mem_vms = n_mem_vms
+            compute_node.n_und_vms = n_und_vms
+            #Eneaend
     return compute_node
 
 

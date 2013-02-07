@@ -28,6 +28,7 @@ from nova.notifier import api as notifier
 from nova.scheduler import driver
 from nova.scheduler import least_cost
 from nova.scheduler import scheduler_options
+from nova.scheduler import api
 from nova import utils
 
 
@@ -162,13 +163,15 @@ class FilterScheduler(driver.Scheduler):
 
         cost_functions = self.get_cost_functions()
         config_options = self._get_configuration_options()
-
         filter_properties = kwargs.get('filter_properties', {})
         filter_properties.update({'context': context,
                                   'request_spec': request_spec,
                                   'config_options': config_options,
                                   'instance_type': instance_type})
-
+        #Eneabegin
+        LOG.debug(_('Enea: attributi in _schedule di filter_properties %(attributi)s in '),
+                        {'attributi': filter_properties.__getattribute__})
+        #Eneaend
         self.populate_filter_properties(request_spec,
                                         filter_properties)
 
@@ -204,6 +207,9 @@ class FilterScheduler(driver.Scheduler):
             # weighing and I plan fold weighing into the host manager
             # in a future patch.  I'll address the naming of this
             # variable at that time.
+            #Eneabegin
+            LOG.debug(_("Enea: property of host %(hosts)s") % locals())
+            #Eneaend
             weighted_host = least_cost.weighted_sum(cost_functions,
                     hosts, filter_properties)
             LOG.debug(_("Weighted %(weighted_host)s") % locals()) 
@@ -217,9 +223,9 @@ class FilterScheduler(driver.Scheduler):
         selected_hosts.sort(key=operator.attrgetter('weight'))
         #Enea_begin
         if len(selected_hosts)>0:
-                LOG.debug(_('Enea: First weight host: %(weight)s and selected hosts: %(selected_hosts)s and host_state[0]: %(host_state)s'),
+                LOG.debug(_('Enea: First weight host: %(weight)s and selected hosts: %(selected_hosts)s and host_state[0]: %(attribute)s'),
                                 {'selected_hosts': selected_hosts,
-                                'host_state': selected_hosts[0].host_state,
+                                'attribute': selected_hosts[0].__getattribute__,
                                 'weight': selected_hosts[0].weight})
         #Enea_end
         return selected_hosts[:num_instances]

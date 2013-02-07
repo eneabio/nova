@@ -25,6 +25,13 @@ is then selected for provisioning.
 from nova import flags
 from nova import log as logging
 from nova.openstack.common import cfg
+import base64
+from nova.db import api as apidb
+from nova.scheduler import api
+from nova.scheduler import host_manager
+from nova.compute import manager
+from nova.compute import api as apicompute
+from nova import rpc
 
 
 LOG = logging.getLogger(__name__)
@@ -72,11 +79,102 @@ def noop_cost_fn(host_state, weighing_properties):
     """Return a pre-weight cost of 1 for each host"""
     return 1
 
-
+#Eneabegin
 def compute_fill_first_cost_fn(host_state, weighing_properties):
     """More free ram = higher weight. So servers will less free
     ram will be preferred."""
     return host_state.free_ram_mb
+
+def compute_fill_first_cost_Enea_fn(host_state, weighing_properties):
+    #Ricordarsi di cambiare il flag in Nova per usare questa funzione al posto di quella originale
+    #Eneabegin
+    """Select host with ...."""
+    #Proprieta' dell'istanza richiesta, user_data indica la classe dell'istanza...
+    user_data_encode = weighing_properties['request_spec']['instance_properties']['user_data']
+    user_data=base64.b64decode(user_data_encode)
+    pesoA=1000;
+    pesoB=-1;
+    pesoC=1;
+    cost=0;
+    #host_state.capabilities
+    #capabilities is a dictionary?
+    #BetaCpuHost = host_state.capabilities
+    #capabilities = host_manager.HostManager.get_all_host_states(weighing_properties['context'], 'compute')
+    context=weighing_properties['context']
+    remote_address = context.remote_address
+    #capabilities=apicompute._cast_or_call_compute_message(rpc.call, '_get_additional_capabilities', context, host) 
+
+    #prende sempre lo stesso host
+    #capabilities=manager._get_additional_capabilities()
+    host=host_state.host
+    service_schedulers = apidb.service_get_all_by_topic(context, 'scheduler')
+    #choice the correct scheduler, it could be with the zone, now it choices the first
+    scheduler_host= service_schedulers[0]['host']
+    service='scheduler.'
+    service=service+scheduler_host
+    LOG.debug(_('Enea: scheduler host in scheduler-least_cost is %s') % service)
+    #da togliere rpc.call, blocca lo scheduler in attesa della risposta
+    #preferibile usare host_state del corretto host guardando i dizionari
+    caps = rpc.call(context, service, {"method": "get_service_capabilities","arg":{"host":host_state.host}})
+    #ricordarsi di cambiare essex1 con il nome variabile dell'host
+    #caps = rpc.call(context, 'scheduler.essex1', {"method": "get_service_capabilities","arg":{"host":host_state.host}})
+    #caps['compute_beta_cpu'][0]
+    LOG.debug(_('Enea: host_name in scheduler-least_cost is %s') % host_state.host)
+    LOG.debug(_('Enea: beta_cpu in scheduler-least_cost is %s') % caps[host]['compute']['beta_cpu'])
+    #BetaCpuHost = float(capabilities['beta_cpu'])
+    #BetaIoHost = float(capabilities['beta_io'])
+    #BetaMemHost = float(capabilities['beta_mem']) 
+    #BetaUndHost = float(capabilities['beta_und'])
+    #capabilities=api.get_service_capabilities(context)
+    BetaCpuHost = float(caps[host]['compute']['beta_cpu'])
+    BetaIoHost = float(caps[host]['compute']['beta_io'])
+    BetaMemHost = float(caps[host]['compute']['beta_mem'])
+    BetaUndHost = float(caps[host]['compute']['beta_und'])
+    #LOG.debug(_('Enea: capabilities: %s') % capabilities)
+    #LOG.debug(_('Enea: Host_state in scheduler-least_cost is %(host_state)s') % locals())
+    #LOG.debug(_('Enea: weighing_properties in scheduler-least_cost for host %(host_state.host)s is %(weighing_properties)s') % locals())
+    #LOG.debug(_('Enea: host_state_capabilities %(capabilities)s in '
+    #                    '%(host_name)s'),
+    #                    {'host_state_capabilities': capabilities,
+    #                    'host_name': host_state.host})
+    #Calcolo beta cappuccio, devo trovare il modo di passare la classe di istanza richiesta...
+    running_vms = host_state.n_cpu_vms + host_state.n_io_vms + host_state.n_mem_vms + host_state.n_und_vms
+    #LOG.debug(_('Enea: Running_vms in scheduler-least_cost is %(running_vms)s') % locals())
+    #LOG.debug(_('Enea: n_cpu_vms in scheduler-least_cost is %s') % host_state.n_cpu_vms/2)
+    #LOG.debug(_('Enea: Running_vms in scheduler-least_cost is %s') % running_vms/2)
+    if user_data == 'cpu':
+        if running_vms==0:
+                newBetaCpu = (host_state.n_cpu_vms+1)/(running_vms+1)
+                cost=(host_state.n_cpu_vms)*pesoA+pesoB*(running_vms)+pesoC*(newBetaCpu-BetaCpuHost)
+        else:
+                newBetaCpu = ((host_state.n_cpu_vms/2)+1)/((running_vms/2)+1)
+                cost=(host_state.n_cpu_vms/2)*pesoA+pesoB*(running_vms/2)+pesoC*(newBetaCpu-BetaCpuHost)
+    if user_data == 'io':
+        if running_vms==0:
+                newBetaIo = (host_state.n_io_vms+1)/(running_vms+1)
+                cost=(host_state.n_io_vms)*pesoA+pesoB*(running_vms)+pesoC*(newBetaIo-BetaIoHost)
+        else:
+                newBetaIo = ((host_state.n_io_vms/2)+1)/((running_vms/2)+1)
+                cost=(host_state.n_io_vms/2)*pesoA+pesoB*(running_vms/2)+pesoC*(newBetaIo-BetaIoHost)
+    if user_data == 'mem':
+        if running_vms==0:
+                newBetaMem = (host_state.n_mem_vms+1)/(running_vms+1)
+                cost=(host_state.n_mem_vms)*pesoA+pesoB*(running_vms)+pesoC*(newBetaMem-BetaMemHost)
+        else:
+                newBetaMem = ((host_state.n_mem_vms/2)+1)/((running_vms/2)+1)
+                cost=(host_state.n_mem_vms/2)*pesoA+pesoB*(running_vms/2)+pesoC*(newBetaMem-BetaMemHost)
+    if user_data == 'und':
+        if running_vms==0:
+                newBetaUnd = (host_state.n_und_vms+1)/(running_vms+1)
+                cost=(host_state.n_und_vms)*pesoA+pesoB*(running_vms)+pesoC*(newBetaUnd-BetaUndHost)
+        else:
+                newBetaUnd = ((host_state.n_und_vms/2)+1)/((running_vms/2)+1)
+                cost=(host_state.n_und_vms/2)*pesoA+pesoB*(running_vms/2)+pesoC*(newBetaUnd-BetaUndHost)
+
+    LOG.debug(_('Enea: Cost in scheduler least_cost is %(cost)s') % locals())
+    return cost
+#Eneaend
+
 
 
 def weighted_sum(weighted_fns, host_states, weighing_properties):
@@ -101,7 +199,7 @@ def weighted_sum(weighted_fns, host_states, weighing_properties):
     # One row per host. One column per function.
     scores = []
     for weight, fn in weighted_fns:
-        scores.append([fn(host_state, weighing_properties)
+        scores.append([fn(host_state, weighing_properties)  #Enea: calcola tutte le funzioni fn
                 for host_state in host_states])
 
     # Adjust the weights in the grid by the functions weight adjustment

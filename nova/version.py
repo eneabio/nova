@@ -14,9 +14,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-NOVA_VERSION = ['2012', '1', None]
+#Eneabegin
+#Eneaend
+NOVA_VERSION = ['2012', '1', 'Enea']
 YEAR, COUNT, REVISION = NOVA_VERSION
-FINAL = True   # This becomes true at Release Candidate time
+FINAL = False   # This becomes true at Release Candidate time, Enea put False, original was True
 
 
 def canonical_version_string():

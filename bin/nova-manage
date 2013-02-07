@@ -1009,6 +1009,76 @@ class ServiceCommands(object):
             return
         db.service_update(ctxt, svc['id'], {'disabled': True})
 
+    #Eneabegin
+    @args('--host', dest='host', metavar='<host>', help='Host')
+    def describe_resource_enea(self, host):
+        """Describes cpu/memory/hdd and running virtual machines for classe info for host.
+
+        :param host: hostname.
+
+        """
+        result = rpc.call(context.get_admin_context(),
+                     FLAGS.scheduler_topic,
+                     {"method": "show_host_resources",
+                      "args": {"host": host}})
+
+        if not isinstance(result, dict):
+            print _('An unexpected error has occurred.')
+            print _('[Result]'), result
+        else:
+            # Printing a total and used_now
+            # (NOTE)The host name width 16 characters
+            print '%(a)-25s%(b)16s%(c)8s%(d)8s%(e)8s%(f)12s%(g)12s%(h)12s%(i)12s%(l)12s' % {"a": _('HOST'),
+                                                         "b": _('PROJECT'),
+                                                         "c": _('cpu'),
+                                                         "d": _('mem(mb)'),
+                                                         "e": _('hdd'),
+                                                         "f": _('running_vms'),
+                                                         "g": _('n_cpu_vms'),
+                                                         "h": _('n_io_vms'),
+                                                         "i": _('n_mem_vms'),
+                                                         "l": _('n_und_vms')}
+            print '%(a)-16s(total)%(b)26s%(c)8s%(d)8s' %\
+                              {"a": host,
+                               "b": result['resource']['vcpus'],
+                               "c": result['resource']['memory_mb'],
+                               "d": result['resource']['local_gb']}
+
+            print '%(a)-16s(used_now)%(b)23s%(c)8s%(d)8s%(e)12s%(f)12s%(g)12s%(h)12s%(i)12s' %\
+                              {"a": host,
+                               "b": result['resource']['vcpus_used'],
+                               "c": result['resource']['memory_mb_used'],
+                               "d": result['resource']['local_gb_used'],
+                               "e": result['resource']['running_vms'],
+                               "f": result['resource']['n_cpu_vms'],
+                               "g": result['resource']['n_io_vms'],
+                               "h": result['resource']['n_mem_vms'],
+                               "i": result['resource']['n_und_vms']}
+
+            # Printing a used_max
+            cpu_sum = 0
+            mem_sum = 0
+            hdd_sum = 0
+            for p_id, val in result['usage'].items():
+                cpu_sum += val['vcpus']
+                mem_sum += val['memory_mb']
+                hdd_sum += val['root_gb']
+                hdd_sum += val['ephemeral_gb']
+            print '%(a)-16s(used_max)%(b)23s%(c)8s%(d)8s' % {"a": host,
+                                                             "b": cpu_sum,
+                                                             "c": mem_sum,
+                                                             "d": hdd_sum}
+
+            for p_id, val in result['usage'].items():
+                print '%(a)-25s%(b)16s%(c)8s%(d)8s%(e)8s' % {
+                        "a": host,
+                        "b": p_id,
+                        "c": val['vcpus'],
+                        "d": val['memory_mb'],
+                        "e": val['root_gb'] + val['ephemeral_gb']}
+
+    #Eneaend    
+    
     @args('--host', dest='host', metavar='<host>', help='Host')
     def describe_resource(self, host):
         """Describes cpu/memory/hdd info for host.
@@ -1065,6 +1135,7 @@ class ServiceCommands(object):
                         "c": val['vcpus'],
                         "d": val['memory_mb'],
                         "e": val['root_gb'] + val['ephemeral_gb']}
+
 
 
 class HostCommands(object):

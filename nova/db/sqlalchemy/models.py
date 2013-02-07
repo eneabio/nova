@@ -146,6 +146,12 @@ class ComputeNode(BASE, NovaBase):
     free_disk_gb = Column(Integer)
     current_workload = Column(Integer)
     running_vms = Column(Integer)
+    #Eneabegin
+    n_cpu_vms=Column(Float()) #nummber of virtual machine classified CPU
+    n_io_vms=Column(Float())    #nummber of virtual machine classified IO
+    n_mem_vms=Column(Float())   #nummber of virtual machine classified MEM
+    n_und_vms=Column(Float())   #nummber of virtual machine unclassified 
+    #Eneaend
 
     # Note(masumotok): Expected Strings example:
     #

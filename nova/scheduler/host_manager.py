@@ -19,6 +19,7 @@ Manage hosts in the current zone.
 
 import datetime
 import UserDict
+import base64
 
 from nova import db
 from nova import exception
@@ -27,6 +28,7 @@ from nova import log as logging
 from nova.openstack.common import cfg
 from nova.scheduler import filters
 from nova import utils
+
 
 
 host_manager_opts = [
@@ -114,12 +116,25 @@ class HostState(object):
         self.free_disk_mb = 0
         self.vcpus_total = 0
         self.vcpus_used = 0
+        #Eneabegin
+        self.n_cpu_vms = 0
+        self.n_io_vms = 0
+        self.n_mem_vms = 0
+        self.n_und_vms = 0
+        #Eneaend
+        
 
     def update_from_compute_node(self, compute):
         """Update information about a host from its compute_node info."""
         all_disk_mb = compute['local_gb'] * 1024
         all_ram_mb = compute['memory_mb']
         vcpus_total = compute['vcpus']
+        #Eneabegin
+        running_cpu_vms = compute['n_cpu_vms']
+        running_io_vms = compute['n_io_vms']
+        running_mem_vms = compute['n_mem_vms']
+        running_und_vms = compute['n_und_vms']
+        #Eneaend
         if FLAGS.reserved_host_disk_mb > 0:
             all_disk_mb -= FLAGS.reserved_host_disk_mb
         if FLAGS.reserved_host_memory_mb > 0:
@@ -127,6 +142,12 @@ class HostState(object):
         self.free_ram_mb = all_ram_mb
         self.free_disk_mb = all_disk_mb
         self.vcpus_total = vcpus_total
+        #Eneabegin
+        self.n_cpu_vms = running_cpu_vms
+        self.n_io_vms = running_io_vms
+        self.n_mem_vms = running_mem_vms
+        self.n_und_vms = running_und_vms
+        #Eneaend
 
     def consume_from_instance(self, instance):
         """Update information about a host from instance info."""
@@ -136,6 +157,18 @@ class HostState(object):
         self.free_ram_mb -= ram_mb
         self.free_disk_mb -= disk_mb
         self.vcpus_used += vcpus
+        #Eneabegin
+        LOG.debug(_('Enea: consume_from_instance capabilities: %(instance information)s'),
+                      {'instance information': instance})
+        if base64.b64decode(instance['user_data']) == 'cpu': 
+            self.n_cpu_vms += 1
+        if base64.b64decode(instance['user_data']) == 'io':    
+            self.n_io_vms += 1
+        if base64.b64decode(instance['user_data']) == 'mem':
+            self.n_mem_vms += 1
+        if base64.b64decode(instance['user_data']) == 'und': #da verificare, aggiungere con stringhe diverse
+            self.n_und_vms += 1
+        #Eneaend
 
     def passes_filters(self, filter_fns, filter_properties):
         """Return whether or not this host passes filters."""
@@ -161,6 +194,12 @@ class HostState(object):
                 return False
 
         LOG.debug(_('Host filter passes for %(host)s'), {'host': self.host})
+        #Eneabegin
+        LOG.debug(_('Enea: Host filter function %(func)s worked for '
+                            '%(host)s'),
+                          {'func': repr(filter_fn),
+                           'host': self.host})
+        #Eneaend
         return True
 
     def __repr__(self):
@@ -230,17 +269,20 @@ class HostManager(object):
             for svc in self.service_states[host]:
                 ret.append({"service": svc, "host_name": host})
         return ret
-
+    #Eneabegin   
     def get_service_capabilities(self):
         """Roll up all the individual host info to generic 'service'
            capabilities. Each capability is aggregated into
            <cap>_min and <cap>_max values."""
         hosts_dict = self.service_states
-
+        #Eneabegin: is better to have a dictionari of host for using capabilities in the scheduler
+        #so I comment all lines
+        LOG.debug(_('Enea: service_states in host_manager are %s') % hosts_dict)
+        #Eneaend
         # TODO(sandy) - be smarter about fabricating this structure.
         # But it's likely to change once we understand what the Best-Match
         # code will need better.
-        combined = {}  # { <service>_<cap> : (min, max), ... }
+        """combined = {}  # { <service>_<cap> : (min, max), ... }
         stale_host_services = {}  # { host1 : [svc1, svc2], host2 :[svc1]}
         for host, host_dict in hosts_dict.iteritems():
             for service_name, service_dict in host_dict.iteritems():
@@ -265,18 +307,27 @@ class HostManager(object):
 
         # Delete the expired host services
         self.delete_expired_host_services(stale_host_services)
-        return combined
-
+        return combined"""
+        return hosts_dict
+        #Eneaend
     def update_service_capabilities(self, service_name, host, capabilities):
         """Update the per-service capabilities based on this notification."""
         LOG.debug(_("Received %(service_name)s service update from "
                     "%(host)s.") % locals())
+        #Eneabegin
+        LOG.debug(_("Enea: Received %(service_name)s service update from "
+                    "%(host)s, capabilities: %(capabilities)s") % locals())
+        #Eneaend
         service_caps = self.service_states.get(host, {})
         # Copy the capabilities, so we don't modify the original dict
         capab_copy = dict(capabilities)
         capab_copy["timestamp"] = utils.utcnow()  # Reported time
         service_caps[service_name] = capab_copy
         self.service_states[host] = service_caps
+        #Eneabegin
+        LOG.debug(_("Enea: Capabilities from host %(host)s: %(capabilities)s") % locals())
+        #LOG.debug(_("Enea: Host_state_cls from host %(host)s: %s")  % self.service_states[host][service_name])
+        #Eneaend
 
     def host_service_caps_stale(self, host, service):
         """Check if host service capabilites are not recent enough."""

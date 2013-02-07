@@ -1,4 +1,1 @@
-['and',
-	['>=', '$free_ram_mb', 400],
-	['>=', '$free_disk_mb', 0]
-]
+[">=", "$free_ram_mb", 400]
